@@ -232,11 +232,17 @@ fun main(args: Array<String>) {
         }
     }
 
-
-    // print the final command to be run by exec
-    val joinedUserArgs = userArgs.joinToString(" ")
-
-    println("kotlin ${kotlinOpts} -classpath ${jarFile}${CP_SEPARATOR_CHAR}${KOTLIN_HOME}${File.separatorChar}lib${File.separatorChar}kotlin-script-runtime.jar${CP_SEPARATOR_CHAR}${classpath} ${execClassName} ${joinedUserArgs} ")
+    // run the main method
+    val cl = JarFileLoader(arrayOf<URL>())
+    if (classpath != null && classpath.isNotEmpty()) {
+        classpath.split(CP_SEPARATOR_CHAR).forEach { cl.addFile(it) }
+    }
+    cl.addFile(jarFile)
+    // passing string is not working for cygwin or git-bash
+    val scriptRuntime = File("${KOTLIN_HOME}${File.separatorChar}lib${File.separatorChar}kotlin-script-runtime.jar")
+    cl.addFile(scriptRuntime)
+    val mainMethod = cl.loadClass(execClassName).getDeclaredMethod("main", Array<String>::class.java)
+    mainMethod.invoke(cl, userArgs.toTypedArray())
 }
 
 
