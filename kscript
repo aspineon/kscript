@@ -58,4 +58,5 @@ if [[ $(uname) == CYGWIN* ]]; then
 fi
 
 ## run it
-exec kotlin "${java_args[@]}" -classpath ${jarPath} kscript.app.KscriptKt "${kscript_args[@]}"
+exec java "${java_args[@]}" -jar ${jarPath} "${kscript_args[@]}"
+

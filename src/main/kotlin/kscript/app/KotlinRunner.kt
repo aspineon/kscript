@@ -15,15 +15,20 @@ class KotlinRunner(private val kotlinHome: String) {
     private val compilerBaseArgs = listOf("-cp", File(joinToPathString(kotlinHome, "lib", "kotlin-compiler.jar")).absolutePath,
             "org.jetbrains.kotlin.cli.jvm.K2JVMCompiler")
 
-    private val preloaderJar = File(joinToPathString(kotlinHome, "lib", "kotlin-preloader.jar"))
 
     // MARK not sure it's better than explicit depends
     private val stdlib8jarPath = File(joinToPathString(kotlinHome, "lib", "kotlin-stdlib-jdk8.jar")).absolutePath
     private val stdlib7jarPath = File(joinToPathString(kotlinHome, "lib", "kotlin-stdlib-jdk7.jar")).absolutePath
 
     private val preloaderMainMethod by lazy {
+        val preloaderJar = File(joinToPathString(kotlinHome, "lib", "kotlin-preloader.jar"))
         jarFileLoader.addFile(preloaderJar)
         jarFileLoader.loadClass(PRELOADER_CLASS).getDeclaredMethod("main", Array<String>::class.java)
+    }
+    private val runnerMainMethod by lazy {
+        System.getProperties().setProperty("kotlin.home", kotlinHome)
+        jarFileLoader.addFile(File(joinToPathString(kotlinHome, "lib", "kotlin-runner.jar")))
+        jarFileLoader.loadClass(RUNNER_MAIN_CLASS).getDeclaredMethod("main", Array<String>::class.java)
     }
 
     fun compile(compilerOpts: List<String>, targetJarFile: File, sourceFiles: List<File>, classpath: String?) {
@@ -74,8 +79,7 @@ class KotlinRunner(private val kotlinHome: String) {
     }
 
     private fun runKotlin(args: Collection<String>) {
-        val runnerMain = jarFileLoader.loadClass(RUNNER_MAIN_CLASS).getDeclaredMethod("main", Array<String>::class.java)
-        runnerMain.invoke(jarFileLoader, args.toTypedArray())
+        runnerMainMethod.invoke(jarFileLoader, args.toTypedArray())
     }
 
     private fun execKotlin(kotlinOpts: List<String>, args: List<String>): Int {
@@ -102,3 +106,4 @@ class KotlinRunner(private val kotlinHome: String) {
                     .start()
                     .waitFor()
 }
+
