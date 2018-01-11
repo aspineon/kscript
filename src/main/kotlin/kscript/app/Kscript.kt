@@ -228,6 +228,9 @@ fun main(args: Array<String>) {
     }
     // run the main method
     val cl = JarFileLoader()
+    val runnerJar = File("${KOTLIN_HOME}${File.separatorChar}lib${File.separatorChar}kotlin-runner.jar")
+    cl.addFile(runnerJar)
+    
     val mainMethod = cl.loadClass("org.jetbrains.kotlin.runner.Main").getDeclaredMethod("main", Array<String>::class.java)
     val args = arrayOf("-cp", "${jarFile}${CP_SEPARATOR_CHAR}${KOTLIN_HOME}${File.separatorChar}lib${File.separatorChar}kotlin-script-runtime.jar${CP_SEPARATOR_CHAR}${classpath}", execClassName, *userArgs.toTypedArray())
     mainMethod.invoke(cl,  args)
