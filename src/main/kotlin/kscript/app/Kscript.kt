@@ -204,7 +204,7 @@ fun main(args: Array<String>) {
 
         // create main-wrapper for kts scripts
 
-        val wrapperSrcArg = if (scriptFileExt == "kts") {
+        val wrapperFile = if (scriptFileExt == "kts") {
             val mainKotlin = File(createTempDir("kscript"), execClassName + ".kt")
 
             val classReference = (script.pckg ?: "") + className
@@ -220,16 +220,24 @@ fun main(args: Array<String>) {
                 }
             }
             """.trimIndent())
+            mainKotlin
+        } else null
 
-            "'${mainKotlin.absolutePath}'"
-        } else {
-            ""
+        val cl = JarFileLoader(arrayOf<URL>())
+        val preloaderJar = File("${KOTLIN_HOME}${File.separatorChar}lib${File.separatorChar}kotlin-preloader.jar")
+        cl.addFile(preloaderJar)
+        var compileArgs = listOf<String>("-cp", "${KOTLIN_HOME}${File.separatorChar}lib${File.separatorChar}kotlin-compiler.jar",
+                "org.jetbrains.kotlin.cli.jvm.K2JVMCompiler",
+                "-d", jarFile.absolutePath, scriptFile.absolutePath)
+        if (wrapperFile != null) {
+            compileArgs += wrapperFile.absolutePath
         }
-
-        val scriptCompileResult = evalBash("kotlinc -classpath '$classpath' -d '${jarFile.absolutePath}' '${scriptFile.absolutePath}' ${wrapperSrcArg}")
-        with(scriptCompileResult) {
-            errorIf(exitCode != 0) { "compilation of '$scriptResource' failed\n$stderr" }
+        if (classpath != null && classpath.isNotEmpty()) {
+            compileArgs += "-cp"
+            compileArgs += classpath
         }
+        val preloader = cl.loadClass("org.jetbrains.kotlin.preloading.Preloader").getDeclaredMethod("main", Array<String>::class.java)
+        preloader.invoke(cl, compileArgs.toTypedArray())
     }
 
     // run the main method
