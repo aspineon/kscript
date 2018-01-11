@@ -96,7 +96,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
 
         requireInPath("mvn")
 
-        val mavenCmd = if (System.getenv("PATH").run { this != null && contains("cygwin") }) {
+        val mavenCmd = if (isCygwin()) {
             // when running with cygwin we need to map the pom path into windows space to work
             "mvn -f $(cygpath -w '${temp.absolutePath}') ${goal}"
         } else {

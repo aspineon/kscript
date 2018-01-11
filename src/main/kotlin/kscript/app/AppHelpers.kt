@@ -23,10 +23,22 @@ data class ProcessResult(val command: String, val exitCode: Int, val stdout: Str
 fun evalBash(cmd: String, wd: File? = null,
              stdoutConsumer: Consumer<String> = StringBuilderConsumer(),
              stderrConsumer: Consumer<String> = StringBuilderConsumer()): ProcessResult {
-    return runProcess("bash", "-c", cmd,
-        wd = wd, stderrConsumer = stderrConsumer, stdoutConsumer = stdoutConsumer)
+    val preamble = if (System.getProperty("os.name").contains("Windows")) {
+        // Use "cmd.exe" to prevent "E r r o r :   0 x 8 0 0 7 0 0 5 7"
+        if (isCygwin()) {
+            arrayOf("cmd", "/c", "bash", "-c")
+        } else { // for git-bash
+            arrayOf("cmd", "/c")
+        }
+    } else {
+        arrayOf("bash", "-c")
+    }
+
+    return runProcess(*preamble, cmd,
+            wd = wd, stderrConsumer = stderrConsumer, stdoutConsumer = stdoutConsumer)
 }
 
+fun isCygwin() = System.getenv("PATH").run { this != null && contains("cygwin") }
 
 fun runProcess(cmd: String, wd: File? = null): ProcessResult {
     val parts = cmd.split("\\s".toRegex())
