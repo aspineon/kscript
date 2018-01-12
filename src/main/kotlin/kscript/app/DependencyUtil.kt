@@ -9,11 +9,11 @@ val DEP_LOOKUP_CACHE_FILE = File(KSCRIPT_CACHE_DIR, "dependency_cache.txt")
 val CP_SEPARATOR_CHAR = if (System.getProperty("os.name").toLowerCase().contains("windows")) ";" else ":"
 
 
-fun resolveDependencies(depIds: List<String>, customRepos: List<MavenRepo> = emptyList(), loggingEnabled: Boolean): String? {
+fun resolveDependencies(depIds: List<String>, customRepos: List<MavenRepo> = emptyList(), loggingEnabled: Boolean): String {
 
     // if no dependencies were provided we stop here
     if (depIds.isEmpty()) {
-        return null
+        return ""
     }
 
     val depsHash = depIds.joinToString(CP_SEPARATOR_CHAR)
@@ -26,7 +26,7 @@ fun resolveDependencies(depIds: List<String>, customRepos: List<MavenRepo> = emp
                 associateBy({ it.split(" ")[0] }, { it.split(" ")[1] })
 
         if (cache.containsKey(depsHash)) {
-            return cache.get(depsHash)
+            return cache.getOrDefault(depsHash, "")
         }
     }
 

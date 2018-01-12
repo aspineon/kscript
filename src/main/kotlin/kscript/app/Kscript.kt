@@ -139,7 +139,7 @@ fun main(args: Array<String>) {
         System.err.println("Creating REPL from ${scriptFile}")
         //        System.err.println("kotlinc ${kotlinOpts} -classpath '${classpath}'")
 
-        val optionalCP = if (classpath != null && classpath.isNotEmpty()) "-classpath ${classpath}" else ""
+        val optionalCP = if (classpath.isNotEmpty()) "-classpath ${classpath}" else ""
         println("kotlinc ${kotlinOpts} ${optionalCP}")
 
         exitProcess(0)
@@ -233,17 +233,26 @@ fun main(args: Array<String>) {
         if (wrapperFile != null) {
             compileArgs += wrapperFile.absolutePath
         }
-        if (classpath != null && classpath.isNotEmpty()) {
+        val kscriptJar = System.getenv("KSCRIPT_JAR")
+        val additionalPath = if (kscriptJar.isNotEmpty()) {
+            val kscriptJarFile = File(kscriptJar)
+            if (kscriptJarFile.isFile) {
+                File(kscriptJar).absolutePath
+            } else ""
+        } else ""
+        val combinedClasspath = if (classpath.isNotEmpty()) "${additionalPath}${CP_SEPARATOR_CHAR}${classpath}" else additionalPath
+        if (combinedClasspath.isNotEmpty()) {
             compileArgs += "-cp"
-            compileArgs += classpath
+            compileArgs += combinedClasspath
         }
+
         val preloader = cl.loadClass("org.jetbrains.kotlin.preloading.Preloader").getDeclaredMethod("main", Array<String>::class.java)
         preloader.invoke(cl, compileArgs.toTypedArray())
     }
 
     // run the main method
     val cl = JarFileLoader()
-    if (classpath != null && classpath.isNotEmpty()) {
+    if (classpath.isNotEmpty()) {
         classpath.split(CP_SEPARATOR_CHAR).forEach { cl.addFile(it) }
     }
     cl.addFile(jarFile)
