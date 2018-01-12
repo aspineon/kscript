@@ -223,11 +223,12 @@ fun main(args: Array<String>) {
             mainKotlin
         } else null
 
-        val cl = JarFileLoader(arrayOf<URL>())
+        val cl = JarFileLoader()
         val preloaderJar = File("${KOTLIN_HOME}${File.separatorChar}lib${File.separatorChar}kotlin-preloader.jar")
         cl.addFile(preloaderJar)
         var compileArgs = listOf<String>("-cp", "${KOTLIN_HOME}${File.separatorChar}lib${File.separatorChar}kotlin-compiler.jar",
                 "org.jetbrains.kotlin.cli.jvm.K2JVMCompiler",
+                "-Xskip-runtime-version-check",
                 "-d", jarFile.absolutePath, scriptFile.absolutePath)
         if (wrapperFile != null) {
             compileArgs += wrapperFile.absolutePath
@@ -241,7 +242,7 @@ fun main(args: Array<String>) {
     }
 
     // run the main method
-    val cl = JarFileLoader(arrayOf<URL>())
+    val cl = JarFileLoader()
     if (classpath != null && classpath.isNotEmpty()) {
         classpath.split(CP_SEPARATOR_CHAR).forEach { cl.addFile(it) }
     }

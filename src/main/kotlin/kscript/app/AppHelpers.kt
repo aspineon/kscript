@@ -9,6 +9,7 @@ import java.security.MessageDigest
 import java.util.function.Consumer
 import kotlin.system.exitProcess
 
+val IS_CYGWIN = System.getenv("PATH").run { this != null && contains("cygwin") }
 
 data class ProcessResult(val command: String, val exitCode: Int, val stdout: String, val stderr: String) {
 
@@ -20,25 +21,23 @@ data class ProcessResult(val command: String, val exitCode: Int, val stdout: Str
     }
 }
 
+private val PREAMBLE = if (System.getProperty("os.name").contains("Windows")) {
+    // Use "cmd.exe" to prevent "E r r o r :   0 x 8 0 0 7 0 0 5 7"
+    if (IS_CYGWIN) {
+        arrayOf("cmd", "/c", "bash", "-c")
+    } else { // for git-bash
+        arrayOf("cmd", "/c")
+    }
+} else {
+    arrayOf("bash", "-c")
+}
+
 fun evalBash(cmd: String, wd: File? = null,
              stdoutConsumer: Consumer<String> = StringBuilderConsumer(),
              stderrConsumer: Consumer<String> = StringBuilderConsumer()): ProcessResult {
-    val preamble = if (System.getProperty("os.name").contains("Windows")) {
-        // Use "cmd.exe" to prevent "E r r o r :   0 x 8 0 0 7 0 0 5 7"
-        if (isCygwin()) {
-            arrayOf("cmd", "/c", "bash", "-c")
-        } else { // for git-bash
-            arrayOf("cmd", "/c")
-        }
-    } else {
-        arrayOf("bash", "-c")
-    }
-
-    return runProcess(*preamble, cmd,
+    return runProcess(*PREAMBLE, cmd,
             wd = wd, stderrConsumer = stderrConsumer, stdoutConsumer = stdoutConsumer)
 }
-
-fun isCygwin() = System.getenv("PATH").run { this != null && contains("cygwin") }
 
 fun runProcess(cmd: String, wd: File? = null): ProcessResult {
     val parts = cmd.split("\\s".toRegex())
