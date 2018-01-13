@@ -54,7 +54,7 @@ done
 followupFile=followup-$$
 
 ## run it
-FOLLOWUP_FILE=$followupFile java $JAVA_OPTS "${java_args[@]}" -jar ${jarPath} "${kscript_args[@]}"
+FOLLOWUP_FILE=$followupFile KSCRIPT_JAR=${jarPath} java $JAVA_OPTS "${java_args[@]}" -jar ${jarPath} "${kscript_args[@]}"
 result=$?
 
 followupPath=${HOME}/.kscript/${followupFile}

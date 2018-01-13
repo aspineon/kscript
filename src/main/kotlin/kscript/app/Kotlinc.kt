@@ -12,6 +12,13 @@ class Kotlinc(val KOTLIN_HOME: String) {
             "org.jetbrains.kotlin.cli.jvm.K2JVMCompiler")
     val preloaderMain = cl.loadClass("org.jetbrains.kotlin.preloading.Preloader").getDeclaredMethod("main", Array<String>::class.java)
 
+    val kscriptJarPath = getPath(System.getenv("KSCRIPT_JAR"))
+
+    fun getPath(jar: String?): String? = jar?.apply {
+        val file = File(jar)
+        if (file.isFile) file.absolutePath
+    }
+
     fun classPathArgs(vararg paths: String?): List<String> {
         val combinedClasspath = listOfNotNull(*paths).filter { it.isNotEmpty() }.joinToString(CP_SEPARATOR_CHAR)
         return if (combinedClasspath.isNotEmpty()) {
@@ -27,13 +34,13 @@ class Kotlinc(val KOTLIN_HOME: String) {
         val baseArgs = listOf<String>("-Xskip-runtime-version-check",
                 "-d", jarFile.absolutePath, scriptFile.absolutePath)
         val wrapperArgs =  listOfNotNull(wrapperFile?.absolutePath)
-        val cpArgs = classPathArgs(classpath)
+        val cpArgs = classPathArgs(kscriptJarPath, classpath)
         runKotlinc(baseArgs + wrapperArgs + cpArgs)
     }
 
     fun interactiveShell(jarFile: File, classpath: String?) {
         val jarPath = if (jarFile.isFile) jarFile.absolutePath else null
-        val args = classPathArgs(classpath, jarPath)
+        val args = classPathArgs(kscriptJarPath, classpath, jarPath)
         runKotlinc(args)
     }
 }
