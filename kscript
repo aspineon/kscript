@@ -54,7 +54,7 @@ done
 followupFile=followup-$$
 
 ## run it
-FOLLOWUP_FILE=$followupFile kotlin "${java_args[@]}" -classpath ${jarPath} kscript.app.KscriptKt "${kscript_args[@]}"
+FOLLOWUP_FILE=$followupFile KSCRIPT_JAR=${jarPath} kotlin "${java_args[@]}" -classpath ${jarPath} kscript.app.KscriptKt "${kscript_args[@]}"
 result=$?
 
 followupPath=${HOME}/.kscript/${followupFile}
