@@ -51,7 +51,17 @@ Website   : https://github.com/holgerbrandl/kscript
 val KSCRIPT_CACHE_DIR = File(System.getenv("HOME")!!, ".kscript")
 val SCRIPT_TEMP_DIR = createTempDir()
 
+val FOLLOWUP_FILE = run {
+    val fileName = System.getenv("FOLLOWUP_FILE")
+    if (fileName == null) null
+    else
+    File(KSCRIPT_CACHE_DIR, fileName)
+}
+
+
 fun main(args: Array<String>) {
+    FOLLOWUP_FILE?.let { if (it.isFile) it.delete() }
+
     // skip org.docopt for version and help to allow for lazy version-check
     if (args.size == 1 && listOf("--help", "-h", "--version", "-v").contains(args[0])) {
         info(USAGE)
@@ -211,6 +221,12 @@ fun main(args: Array<String>) {
         }
     }
 
+    if (kotlinOpts.isNotEmpty()) {
+        // print the final command to be run by exec
+        val joinedUserArgs = userArgs.joinToString(" ")
+        writeToFollowUpFile("kotlin ${kotlinOpts} -classpath ${jarFile}${CP_SEPARATOR_CHAR}${KOTLIN_HOME}${File.separatorChar}lib${File.separatorChar}kotlin-script-runtime.jar${CP_SEPARATOR_CHAR}${classpath} ${execClassName} ${joinedUserArgs} ")
+        exitProcess(0)
+    }
     // run the main method
     val cl = JarFileLoader(arrayOf<URL>())
     if (classpath != null && classpath.isNotEmpty()) {
@@ -222,6 +238,13 @@ fun main(args: Array<String>) {
     cl.addFile(scriptRuntime)
     val mainMethod = cl.loadClass(execClassName).getDeclaredMethod("main", Array<String>::class.java)
     mainMethod.invoke(cl, userArgs.toTypedArray())
+}
+
+fun writeToFollowUpFile(content: String) {
+    errorIf(FOLLOWUP_FILE == null) {
+        "Cannot determine FOLLOWUP_FILE"
+    }
+    FOLLOWUP_FILE!!.writeText(content)
 }
 
 private fun selfUpdate() {
