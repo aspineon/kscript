@@ -9,6 +9,7 @@ import java.security.MessageDigest
 import java.util.function.Consumer
 import kotlin.system.exitProcess
 
+val IS_WINDOWS = System.getProperty("os.name").toLowerCase().contains("windows")
 val IS_CYGWIN = System.getenv("PATH").run { this != null && contains("cygwin") }
 
 data class ProcessResult(val command: String, val exitCode: Int, val stdout: String, val stderr: String) {
@@ -21,21 +22,18 @@ data class ProcessResult(val command: String, val exitCode: Int, val stdout: Str
     }
 }
 
-private val PREAMBLE = if (System.getProperty("os.name").contains("Windows")) {
-    // Use "cmd.exe" to prevent "E r r o r :   0 x 8 0 0 7 0 0 5 7"
-    if (IS_CYGWIN) {
-        arrayOf("cmd", "/c", "bash", "-c")
-    } else { // for git-bash
-        arrayOf("cmd", "/c")
-    }
+private val PREAMBLE = if (IS_WINDOWS) {
+    arrayOf("cmd", "/c", "bash", "-c")
 } else {
     arrayOf("bash", "-c")
 }
 
+private fun prepareCmd(cmd: String) = if (IS_WINDOWS) cmd.replace("\"", "\\\"") else cmd
+
 fun evalBash(cmd: String, wd: File? = null,
              stdoutConsumer: Consumer<String> = StringBuilderConsumer(),
              stderrConsumer: Consumer<String> = StringBuilderConsumer()): ProcessResult {
-    return runProcess(*PREAMBLE, cmd,
+    return runProcess(*PREAMBLE, prepareCmd(cmd),
             wd = wd, stderrConsumer = stderrConsumer, stdoutConsumer = stdoutConsumer)
 }
 

@@ -6,7 +6,7 @@ import java.io.File
 
 val DEP_LOOKUP_CACHE_FILE = File(KSCRIPT_CACHE_DIR, "dependency_cache.txt")
 
-val CP_SEPARATOR_CHAR = if (System.getProperty("os.name").toLowerCase().contains("windows")) ";" else ":"
+val CP_SEPARATOR_CHAR = if (IS_WINDOWS) ";" else ":"
 
 
 fun resolveDependencies(depIds: List<String>, customRepos: List<MavenRepo> = emptyList(), loggingEnabled: Boolean): String? {
@@ -89,6 +89,17 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
 </project>
 """
 
+    val mvnPreamble = if (IS_WINDOWS) {
+        // Use "cmd.exe" to prevent "E r r o r :   0 x 8 0 0 7 0 0 5 7"
+        if (IS_CYGWIN) {
+            arrayOf("cmd", "/c", "bash", "-c")
+        } else { // for git-bash
+            arrayOf("cmd", "/c")
+        }
+    } else {
+        arrayOf("bash", "-c")
+    }
+
 
     fun runMaven(pom: String, goal: String): Iterable<String> {
         val temp = File.createTempFile("__resdeps__temp__", "_pom.xml")
@@ -103,7 +114,8 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
             "mvn -f ${temp.absolutePath} ${goal}"
         }
 
-        return evalBash(mavenCmd, stdoutConsumer = object : StringBuilderConsumer() {
+//        return evalBash(mavenCmd, stdoutConsumer = object : StringBuilderConsumer() {
+        return runProcess(*mvnPreamble, mavenCmd, stdoutConsumer = object : StringBuilderConsumer() {
             override fun accept(t: String) {
                 super.accept(t)
 
