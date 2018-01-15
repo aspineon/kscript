@@ -226,7 +226,7 @@ fun main(args: Array<String>) {
     // run the main method
     val cl = JarFileLoader()
     if (classpath != null && classpath.isNotEmpty()) {
-        classpath.split(CP_SEPARATOR_CHAR).forEach { cl.addFile(it) }
+        classpath.split(CP_SEPARATOR_CHAR).forEach { cl.addFile(File(it)) }
     }
     cl.addFile(jarFile)
     // passing string is not working for cygwin or git-bash

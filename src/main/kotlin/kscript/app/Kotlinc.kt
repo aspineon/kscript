@@ -2,13 +2,18 @@ package kscript.app
 
 import java.io.File
 
-class Kotlinc(val KOTLIN_HOME: String) {
+class Kotlinc(val kotlinHomeRaw: String) {
     val cl = JarFileLoader()
-    val preloaderJar = File("${KOTLIN_HOME}${File.separatorChar}lib${File.separatorChar}kotlin-preloader.jar")
+    val kotlinHome = if (IS_WINDOWS && !IS_CYGWIN) evalBash("cygpath -w $kotlinHomeRaw").stdout.trim()
+    else kotlinHomeRaw
+    val preloaderJar = File("${kotlinHome}${File.separatorChar}lib${File.separatorChar}kotlin-preloader.jar")
     init {
+        errorIf(!preloaderJar.isFile) {
+            "Cannot load preloaderJar - KOTLIN_HOME:$kotlinHome"
+        }
         cl.addFile(preloaderJar)
     }
-    val baseArgs = listOf<String>("-cp", "${KOTLIN_HOME}${File.separatorChar}lib${File.separatorChar}kotlin-compiler.jar",
+    val baseArgs = listOf("-cp", "${kotlinHome}${File.separatorChar}lib${File.separatorChar}kotlin-compiler.jar",
             "org.jetbrains.kotlin.cli.jvm.K2JVMCompiler")
     val preloaderMain = cl.loadClass("org.jetbrains.kotlin.preloading.Preloader").getDeclaredMethod("main", Array<String>::class.java)
 
