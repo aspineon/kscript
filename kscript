@@ -20,13 +20,6 @@ resolve_symlink() (
 
 abs_kscript_path=$(resolve_symlink $(absolute_path $0))
 
-## resolve application jar path from script location and convert to windows path when using cygwin
-jarPath=$(dirname $abs_kscript_path)/kscript.jar
-if [[ $(uname) == CYGWIN* ]]; then
-    jarPath=$(cygpath -w ${jarPath})
-    [[ ! -z $KOTLIN_HOME ]] && KOTLIN_HOME=$(cygpath -w ${KOTLIN_HOME})
-fi
-
 # from 'kotlinc'
 
 [ -n "$JAVA_OPTS" ] || JAVA_OPTS="-Xmx256M -Xms32M"
@@ -51,8 +44,21 @@ while [ $# -gt 0 ]; do
   esac
 done
 
-followupFile=followup-$$
+## resolve application jar path from script location and convert to windows path when using cygwin
+jarPath=$(dirname $abs_kscript_path)/kscript.jar
+if [[ $(uname) == CYGWIN* ]]; then
+    jarPath=$(cygpath -w ${jarPath})
+    [[ ! -z $KOTLIN_HOME ]] && KOTLIN_HOME=$(cygpath -w ${KOTLIN_HOME})
+    argLength=${#kscript_args[@]}
+    for (( i=0; i<${argLength}; i++ )); do
+	if [[ -r ${kscript_args[$i]} ]]; then
+	    kscript_args[$i]=$(cygpath -w ${kscript_args[$i]})
+	fi
+    done
+fi
 
+
+followupFile=followup-$$
 ## run it
 FOLLOWUP_FILE=$followupFile kotlin "${java_args[@]}" -classpath ${jarPath} kscript.app.KscriptKt "${kscript_args[@]}"
 result=$?
