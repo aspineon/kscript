@@ -89,16 +89,6 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
 </project>
 """
 
-    val mvnPreamble = if (IS_WINDOWS) {
-        // Use "cmd.exe" to prevent "E r r o r :   0 x 8 0 0 7 0 0 5 7"
-        if (IS_CYGWIN) {
-            arrayOf("cmd", "/c", "bash", "-c")
-        } else { // for git-bash
-            arrayOf("cmd", "/c")
-        }
-    } else {
-        arrayOf("bash", "-c")
-    }
 
 
     fun runMaven(pom: String, goal: String): Iterable<String> {
@@ -114,7 +104,17 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
             "mvn -f ${temp.absolutePath} ${goal}"
         }
 
-//        return evalBash(mavenCmd, stdoutConsumer = object : StringBuilderConsumer() {
+        val mvnPreamble = if (IS_WINDOWS) {
+            // Use "cmd.exe" to prevent "E r r o r :   0 x 8 0 0 7 0 0 5 7"
+            if (IS_CYGWIN) {
+                arrayOf("cmd", "/c", "bash", "-c")
+            } else { // for git-bash
+                arrayOf("cmd", "/c")
+            }
+        } else {
+            arrayOf("bash", "-c")
+        }
+
         return runProcess(*mvnPreamble, mavenCmd, stdoutConsumer = object : StringBuilderConsumer() {
             override fun accept(t: String) {
                 super.accept(t)
