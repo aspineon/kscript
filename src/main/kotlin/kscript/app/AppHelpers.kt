@@ -28,7 +28,7 @@ private val PREAMBLE = if (IS_WINDOWS) {
     arrayOf("bash", "-c")
 }
 
-private fun prepareCmd(cmd: String) = if (IS_WINDOWS) cmd.replace("\"", "\\\"") else cmd
+private fun prepareCmd(cmd: String) = if (IS_WINDOWS) cmd.replace("\\\\", "\\\\\\\\").replace("\"", "\\\"") else cmd
 
 fun evalBash(cmd: String, wd: File? = null,
              stdoutConsumer: Consumer<String> = StringBuilderConsumer(),
