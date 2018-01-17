@@ -32,6 +32,7 @@ fun resolveIncludes(template: File): File {
                     include.startsWith("https://") -> URL(include)
                     include.startsWith("./") || include.startsWith("../") -> File(template.parentFile, include).toURI().toURL()
                     include.startsWith("/") -> File(include).toURI().toURL()
+                    include.startsWith("~/") -> File(System.getenv("HOME")!! + include.substring(1)).toURI().toURL()
                     else -> File(template.parentFile, include).toURI().toURL()
                 }
 
