@@ -13,9 +13,9 @@ const val PACKAGE_STATEMENT_PREFIX = "package "
 const val IMPORT_STATMENT_PREFIX = "import " // todo make more solid by using operator including regex
 
 /** Resolve include declarations in a script file. Resolved script will be put into another temporary script */
-fun resolveIncludes(template: File): File {
+fun resolveIncludes(template: File, baseDirCandidate: File? = null): File {
     var script = Script(template)
-
+    val baseDir = baseDirCandidate ?: template.parentFile
     // just rewrite user scripts if includes a
     if (!script.any { isIncludeDirective(it) }) {
         return template
@@ -30,10 +30,10 @@ fun resolveIncludes(template: File): File {
                 val includeURL = when {
                     include.startsWith("http://") -> URL(include)
                     include.startsWith("https://") -> URL(include)
-                    include.startsWith("./") || include.startsWith("../") -> File(template.parentFile, include).toURI().toURL()
+                    include.startsWith("./") || include.startsWith("../") -> File(baseDir, include).toURI().toURL()
                     include.startsWith("/") -> File(include).toURI().toURL()
                     include.startsWith("~/") -> File(System.getenv("HOME")!! + include.substring(1)).toURI().toURL()
-                    else -> File(template.parentFile, include).toURI().toURL()
+                    else -> File(baseDir, include).toURI().toURL()
                 }
 
                 try {
