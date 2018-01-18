@@ -308,10 +308,12 @@ fun prepareScript(scriptResource: String, enableSupportApi: Boolean): File {
         }
     }
 
+    var scriptDirectory: File? = null
     // support stdin
     if (scriptResource == "-" || scriptResource == "/dev/stdin") {
         val scriptText = generateSequence() { readLine() }.joinToString("\n").trim()
         scriptFile = createTmpScript(scriptText)
+        scriptDirectory = File(System.getProperty("user.dir"))
     }
 
 
@@ -362,7 +364,7 @@ fun prepareScript(scriptResource: String, enableSupportApi: Boolean): File {
     //    System.err.println("[kscript] temp script file is \n${Script(scriptFile!!)}")
 
     // resolve all includes (see https://github.com/holgerbrandl/kscript/issues/34)
-    scriptFile = resolveIncludes(scriptFile!!)
+    scriptFile = resolveIncludes(scriptFile!!, scriptDirectory)
 
     return scriptFile!!
 }
