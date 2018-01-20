@@ -60,14 +60,14 @@ fi
 
 followupFile=followup-$$
 ## run it
-FOLLOWUP_FILE=$followupFile KSCRIPT_JAR=${jarPath} java $JAVA_OPTS "${java_args[@]}" -jar ${jarPath} "${kscript_args[@]}"
+FOLLOWUP_FILE=$followupFile KSCRIPT_JAR=${jarPath} java $JAVA_OPTS "${java_args[@]}" -Dkotlin.home=${KOTLIN_HOME} -jar ${jarPath} "${kscript_args[@]}"
 result=$?
 
 followupPath=${HOME}/.kscript/${followupFile}
 
 if [[ -f $followupPath ]]; then
     cmd=$(cat $followupPath)
-    rm -f $followupPath
+    "${RMCMD:=rm}" -f $followupPath
     exec $cmd
 else
     exit $result

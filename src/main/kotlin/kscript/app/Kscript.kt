@@ -225,12 +225,17 @@ fun main(args: Array<String>) {
     }
     // run the main method
     val cl = JarFileLoader()
-    if (classpath != null && classpath.isNotEmpty()) {
-        classpath.split(CP_SEPARATOR_CHAR).forEach { cl.addFile(File(it)) }
-    }
-    cl.addFile(jarFile)
-    val mainMethod = cl.loadClass(execClassName).getDeclaredMethod("main", Array<String>::class.java)
-    mainMethod.invoke(cl, userArgs.toTypedArray())
+
+    val kotlinHomeRaw = KOTLIN_HOME!!
+    val kotlinHome = if (IS_WINDOWS && !IS_CYGWIN) evalBash("cygpath -w $kotlinHomeRaw").stdout.trim()
+    else kotlinHomeRaw
+    val runnerJar = File("${kotlinHome}${File.separatorChar}lib${File.separatorChar}kotlin-runner.jar")
+
+
+    cl.addFile(runnerJar)
+    val mainMethod = cl.loadClass("org.jetbrains.kotlin.runner.Main").getDeclaredMethod("main", Array<String>::class.java)
+    val args = arrayOf("-cp", "${jarFile}${CP_SEPARATOR_CHAR}${KOTLIN_HOME}${File.separatorChar}lib${File.separatorChar}kotlin-script-runtime.jar${CP_SEPARATOR_CHAR}${classpath}", execClassName, *userArgs.toTypedArray())
+    mainMethod.invoke(cl,  args)
 }
 
 fun writeToFollowUpFile(content: String) {

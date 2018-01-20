@@ -29,8 +29,6 @@ dependencies {
 //    https://docs.gradle.org/current/userguide/java_plugin.html#sec:java_plugin_and_dependency_management
 //    compileOnly "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
     compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
-    compile "org.jetbrains.kotlin:kotlin-script-runtime:$kotlin_version"
-    compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
 
 //    compile "org.apache.commons:commons-csv:1.3"
     compile "com.offbytwo:docopt:0.6.0.20150202"
