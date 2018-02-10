@@ -90,20 +90,32 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
 """
 
 
+
     fun runMaven(pom: String, goal: String): Iterable<String> {
         val temp = File.createTempFile("__resdeps__temp__", "_pom.xml")
         temp.writeText(pom)
 
         requireInPath("mvn")
 
-        val mavenCmd = if (System.getenv("PATH").run { this != null && contains("cygwin") }) {
+        val mavenCmd = if (IS_CYGWIN) {
             // when running with cygwin we need to map the pom path into windows space to work
             "mvn -f $(cygpath -w '${temp.absolutePath}') ${goal}"
         } else {
             "mvn -f ${temp.absolutePath} ${goal}"
         }
 
-        return evalBash(mavenCmd, stdoutConsumer = object : StringBuilderConsumer() {
+        val mvnPreamble = if (IS_WINDOWS) {
+            // Use "cmd.exe" to prevent "E r r o r :   0 x 8 0 0 7 0 0 5 7"
+            if (IS_CYGWIN) {
+                arrayOf("cmd", "/c", "bash", "-c")
+            } else { // for git-bash
+                arrayOf("cmd", "/c")
+            }
+        } else {
+            arrayOf("bash", "-c")
+        }
+
+        return runProcess(*mvnPreamble, mavenCmd, stdoutConsumer = object : StringBuilderConsumer() {
             override fun accept(t: String) {
                 super.accept(t)
 
