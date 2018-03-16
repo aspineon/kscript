@@ -25,7 +25,7 @@ class Tests {
             "log4j:log4j:1.2.14"
         )
 
-        Script(lines).collectDependencies() shouldBe expected
+        Script(lines).dependencies shouldBe expected
     }
 
     @Test
@@ -38,7 +38,7 @@ class Tests {
             "com.github.holgerbrandl:kscript-annotations:1.2"
         )
 
-        Script(lines).collectDependencies() shouldBe expected
+        Script(lines).dependencies shouldBe expected
 
         // but reject comma separation within dependency entries
         // note: disabled because quits kscript by design
@@ -62,7 +62,7 @@ class Tests {
             "com.github.holgerbrandl:kscript-annotations:1.2"
         )
 
-        Script(lines).collectDependencies() shouldBe expected
+        Script(lines).dependencies shouldBe expected
     }
 
 
@@ -77,11 +77,11 @@ class Tests {
 
         with(Script(lines)) {
 
-            collectRepos() shouldBe listOf(
+            repos shouldBe listOf(
                 MavenRepo("imagej-releases", "http://maven.imagej.net/content/repositories/releases")
             )
 
-            collectDependencies() shouldBe listOf(
+            dependencies shouldBe listOf(
                 "net.clearvolume:cleargl:2.0.1",
                 "log4j:log4j:1.2.14",
                 "com.github.holgerbrandl:kscript-annotations:1.2"
@@ -99,7 +99,7 @@ class Tests {
             "//KOTLIN_OPTS  --bar"
         )
 
-        Script(lines).collectRuntimeOptions() shouldBe "-foo 3 'some file.txt' --bar"
+        Script(lines).runtimeOptions shouldBe "-foo 3 'some file.txt' --bar"
     }
 
     @Test
@@ -109,7 +109,7 @@ class Tests {
             """@file:KotlinOpts("--bar")"""
         )
 
-        Script(lines).collectRuntimeOptions() shouldBe "-foo 3 'some file.txt' --bar"
+        Script(lines).runtimeOptions shouldBe "-foo 3 'some file.txt' --bar"
     }
 
     @Test
@@ -127,7 +127,7 @@ class Tests {
             fun a = ""
             """.trimIndent()
 
-        Script(commentDriven.lines()).findEntryPoint() shouldBe "Foo"
+        Script(commentDriven.lines()).entryPoint shouldBe "Foo"
 
 
         val annotDriven = """
@@ -136,7 +136,7 @@ class Tests {
             fun a = ""
             """.trimIndent()
 
-        Script(annotDriven.lines()).findEntryPoint() shouldBe "Foo"
+        Script(annotDriven.lines()).entryPoint shouldBe "Foo"
     }
 
 

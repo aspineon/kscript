@@ -68,12 +68,108 @@ data class Script(val lines: List<String>, val extension: String = "kts") : Iter
 
         return copy(lines = consolidated.lines())
     }
+
+    val entryPoint: String? = lines.find { isEntryPointDirective(it) }?.let { extractEntryPoint(it) }
+
+
+    //
+    // Custom Artifact Repos
+    //
+
+    val dependencies: List<String> by lazy {
+        // Make sure that dependencies declarations are well formatted
+        if (lines.any { it.startsWith("// DEPS") }) {
+            error("Dependencies must be declared by using the line prefix //DEPS")
+        }
+
+        val dependencies = lines.filter {
+            isDependDeclare(it)
+        }.flatMap {
+            extractDependencies(it)
+        }.toMutableList()
+
+
+        // if annotations are used add dependency on kscript-annotations
+        if (lines.any { isKscriptAnnotation(it) }) {
+            dependencies += "com.github.holgerbrandl:kscript-annotations:1.2"
+        }
+        dependencies.distinct()
+    }
+
+    /**
+     * Collect custom artifact repos declared with @file:MavenRepository
+     */
+    val repos: List<MavenRepo> by lazy {
+        val dependsOnMavenPrefix = "^@file:MavenRepository[(]".toRegex()
+        // only supported annotation format for now
+
+        // @file:MavenRepository("imagej", "http://maven.imagej.net/content/repositories/releases/")
+        lines
+                .filter { it.contains(dependsOnMavenPrefix) }
+                .map { it.replaceFirst(dependsOnMavenPrefix, "").split(")")[0] }
+                .map { it.split(",").map { it.trim(' ', '"', '(') }.let { MavenRepo(it[0], it[1]) } }
+
+        // todo add credential support https://stackoverflow.com/questions/36282168/how-to-add-custom-maven-repository-to-gradle
+    }
+
+    //
+    // Runtime Configuration
+    //
+
+    /**
+     * Collect runtime options declared using //KOTLIN_OPTS or @file:KotlinOpts
+     */
+    val runtimeOptions: String by lazy {
+        val koptsPrefix = "//KOTLIN_OPTS "
+
+        var kotlinOpts = lines.filter { it.startsWith(koptsPrefix) }.map { it.replaceFirst(koptsPrefix, "").trim() }
+
+        //support for @file:KotlinOpts see #47
+        val annotatonPrefix = "^@file:KotlinOpts[(]".toRegex()
+        kotlinOpts += lines
+                .filter { it.contains(annotatonPrefix) }
+                .map { it.replaceFirst(annotatonPrefix, "").split(")")[0] }
+                .map { it.trim(' ', '"') }
+
+
+        // Append $KSCRIPT_KOTLIN_OPTS if defined in the parent environment
+        System.getenv()["KSCRIPT_KOTLIN_OPTS"]?.run {
+            kotlinOpts = kotlinOpts + this
+        }
+
+        kotlinOpts.joinToString(" ")
+    }
+
+
+    /**
+     * Collect compiler options declared using //COMPILER_OPTS or @file:CompilerOpts
+     */
+    val compilerOptions: String by lazy {
+        val koptsPrefix = "//COMPILER_OPTS "
+
+        var compilerOpts = lines.filter { it.startsWith(koptsPrefix) }.map { it.replaceFirst(koptsPrefix, "").trim() }
+
+        val annotatonPrefix = "^@file:CompilerOpts[(]".toRegex()
+        compilerOpts += lines
+                .filter { it.contains(annotatonPrefix) }
+                .map { it.replaceFirst(annotatonPrefix, "").split(")")[0] }
+                .map { it.trim(' ', '"') }
+
+        compilerOpts.joinToString(" ")
+    }
+
+    val compiles: List<String> by lazy {
+        val annotationPrefix = "^@file:Compile[(]".toRegex()
+        lines.filter { it.contains(annotationPrefix) }
+                .map { it.replaceFirst(annotationPrefix, "").split(")")[0]}
+                .map { it.trim(' ', '"')}
+    }
 }
 
 
 private fun isKscriptAnnotation(line: String) =
-    listOf("DependsOn", "KotlinOpts", "Include", "EntryPoint", "MavenRepository", "DependsOnMaven")
-        .any { line.contains("^@file:${it}[(]".toRegex()) }
+        listOf("DependsOn", "KotlinOpts", "Include", "EntryPoint", "MavenRepository", "DependsOnMaven")
+                .any { line.contains("^@file:${it}[(]".toRegex()) }
 
 
 //
@@ -85,18 +181,13 @@ private const val ENTRY_COMMENT_PREFIX = "//ENTRY "
 
 
 fun isEntryPointDirective(line: String) =
-    line.startsWith(ENTRY_COMMENT_PREFIX) || line.contains(ENTRY_ANNOT_PREFIX)
-
-
-fun Script.findEntryPoint(): String? {
-    return lines.find { isEntryPointDirective(it) }?.let { extractEntryPoint(it) }
-}
+        line.startsWith(ENTRY_COMMENT_PREFIX) || line.contains(ENTRY_ANNOT_PREFIX)
 
 private fun extractEntryPoint(line: String) = when {
     line.contains(ENTRY_ANNOT_PREFIX) ->
         line
-            .replaceFirst(ENTRY_ANNOT_PREFIX, "")
-            .split(")")[0].trim(' ', '"')
+                .replaceFirst(ENTRY_ANNOT_PREFIX, "")
+                .split(")")[0].trim(' ', '"')
     line.startsWith(ENTRY_COMMENT_PREFIX) ->
         line.split("[ ]+".toRegex()).last()
     else ->
@@ -113,35 +204,12 @@ private val DEPS_COMMENT_PREFIX = "//DEPS "
 private val DEPS_ANNOT_PREFIX = "^@file:DependsOn[(]".toRegex()
 private val DEPSMAVEN_ANNOT_PREFIX = "^@file:DependsOnMaven[(]".toRegex()
 
-
-fun Script.collectDependencies(): List<String> {
-    // Make sure that dependencies declarations are well formatted
-    if (lines.any { it.startsWith("// DEPS") }) {
-        error("Dependencies must be declared by using the line prefix //DEPS")
-    }
-
-    val dependencies = lines.filter {
-        isDependDeclare(it)
-    }.flatMap {
-        extractDependencies(it)
-    }.toMutableList()
-
-
-    // if annotations are used add dependency on kscript-annotations
-    if (lines.any { isKscriptAnnotation(it) }) {
-        dependencies += "com.github.holgerbrandl:kscript-annotations:1.2"
-    }
-
-    return dependencies.distinct()
-}
-
-
 private fun String.extractAnnotParams(): List<String> {
     // https://stackoverflow.com/questions/171480/regex-grabbing-values-between-quotation-marks
     val annotationArgs = """(["'])(\\?.*?)\1""".toRegex()
-        .findAll(this).toList().map {
-        it.groupValues[2]
-    }
+            .findAll(this).toList().map {
+                it.groupValues[2]
+            }
 
     // fail if any argument is a comma separated list of artifacts (see #101)
     annotationArgs.filter { it.contains(',') }.let {
@@ -155,15 +223,15 @@ private fun String.extractAnnotParams(): List<String> {
 
 internal fun extractDependencies(line: String) = when {
     line.contains(DEPS_ANNOT_PREFIX) -> line
-        .replaceFirst(DEPS_ANNOT_PREFIX, "")
-        .extractAnnotParams()
+            .replaceFirst(DEPS_ANNOT_PREFIX, "")
+            .extractAnnotParams()
 //        .split(")")[0].split(",")
 //        .map { it.trim(' ', '"') }
 
 
     line.contains(DEPSMAVEN_ANNOT_PREFIX) -> line
-        .replaceFirst(DEPSMAVEN_ANNOT_PREFIX, "")
-        .split(")")[0].trim(' ', '"').let { listOf(it) }
+            .replaceFirst(DEPSMAVEN_ANNOT_PREFIX, "")
+            .split(")")[0].trim(' ', '"').let { listOf(it) }
 
     line.startsWith(DEPS_COMMENT_PREFIX) ->
         line.split("[ ;,]+".toRegex()).drop(1).map(String::trim)
@@ -174,76 +242,9 @@ internal fun extractDependencies(line: String) = when {
 
 
 private fun isDependDeclare(line: String) =
-    line.startsWith(DEPS_COMMENT_PREFIX) || line.contains(DEPS_ANNOT_PREFIX) || line.contains(DEPSMAVEN_ANNOT_PREFIX)
-
-
-//
-// Custom Artifact Repos
-//
-
+        line.startsWith(DEPS_COMMENT_PREFIX) || line.contains(DEPS_ANNOT_PREFIX) || line.contains(DEPSMAVEN_ANNOT_PREFIX)
 
 data class MavenRepo(val id: String, val url: String)
 
-/**
- * Collect custom artifact repos declared with @file:MavenRepository
- */
-fun Script.collectRepos(): List<MavenRepo> {
-    val dependsOnMavenPrefix = "^@file:MavenRepository[(]".toRegex()
-    // only supported annotation format for now
-
-    // @file:MavenRepository("imagej", "http://maven.imagej.net/content/repositories/releases/")
-    return lines
-        .filter { it.contains(dependsOnMavenPrefix) }
-        .map { it.replaceFirst(dependsOnMavenPrefix, "").split(")")[0] }
-        .map { it.split(",").map { it.trim(' ', '"', '(') }.let { MavenRepo(it[0], it[1]) } }
-
-    // todo add credential support https://stackoverflow.com/questions/36282168/how-to-add-custom-maven-repository-to-gradle
-}
 
 
-//
-// Runtime Configuration
-//
-
-
-/**
- * Collect runtime options declared using //KOTLIN_OPTS or @file:KotlinOpts
- */
-fun Script.collectRuntimeOptions(): String {
-    val koptsPrefix = "//KOTLIN_OPTS "
-
-    var kotlinOpts = lines.filter { it.startsWith(koptsPrefix) }.map { it.replaceFirst(koptsPrefix, "").trim() }
-
-    //support for @file:KotlinOpts see #47
-    val annotatonPrefix = "^@file:KotlinOpts[(]".toRegex()
-    kotlinOpts += lines
-        .filter { it.contains(annotatonPrefix) }
-        .map { it.replaceFirst(annotatonPrefix, "").split(")")[0] }
-        .map { it.trim(' ', '"') }
-
-
-    // Append $KSCRIPT_KOTLIN_OPTS if defined in the parent environment
-    System.getenv()["KSCRIPT_KOTLIN_OPTS"]?.run {
-        kotlinOpts = kotlinOpts + this
-    }
-
-    return kotlinOpts.joinToString(" ")
-}
-
-
-/**
- * Collect compiler options declared using //COMPILER_OPTS or @file:CompilerOpts
- */
-fun Script.collectCompilerOptions(): String {
-    val koptsPrefix = "//COMPILER_OPTS "
-
-    var compilerOpts = lines.filter { it.startsWith(koptsPrefix) }.map { it.replaceFirst(koptsPrefix, "").trim() }
-
-    val annotatonPrefix = "^@file:CompilerOpts[(]".toRegex()
-    compilerOpts += lines
-        .filter { it.contains(annotatonPrefix) }
-        .map { it.replaceFirst(annotatonPrefix, "").split(")")[0] }
-        .map { it.trim(' ', '"') }
-
-    return compilerOpts.joinToString(" ")
-}
