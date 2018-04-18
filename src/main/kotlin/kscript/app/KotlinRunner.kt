@@ -17,6 +17,10 @@ class KotlinRunner(private val kotlinHome: String) {
 
     private val preloaderJar = File(joinToPathString(kotlinHome, "lib", "kotlin-preloader.jar"))
 
+    // MARK not sure it's better than explicit depends
+    private val stdlib8jarPath = File(joinToPathString(kotlinHome, "lib", "kotlin-stdlib-jdk8.jar")).absolutePath
+    private val stdlib7jarPath = File(joinToPathString(kotlinHome, "lib", "kotlin-stdlib-jdk7.jar")).absolutePath
+
     private val preloaderMainMethod by lazy {
         jarFileLoader.addFile(preloaderJar)
         jarFileLoader.loadClass(PRELOADER_CLASS).getDeclaredMethod("main", Array<String>::class.java)
@@ -25,7 +29,7 @@ class KotlinRunner(private val kotlinHome: String) {
     fun compile(compilerOpts: List<String>, targetJarFile: File, sourceFiles: List<File>, classpath: String?) {
         val baseArgs = listOf("-Xskip-runtime-version-check") +
                 compilerOpts + listOf("-d", targetJarFile.absolutePath)
-        val cpArgs = classPathArgs(classpath, kscriptJar)
+        val cpArgs = classPathArgs(classpath, kscriptJar, stdlib8jarPath, stdlib7jarPath)
         runKotlinc(baseArgs + sourceFiles.map { it.absolutePath } + cpArgs)
     }
 
