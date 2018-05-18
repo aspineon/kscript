@@ -52,4 +52,5 @@ while [ $# -gt 0 ]; do
 done
 
 ## run it
-exec kotlin "${java_args[@]}" -classpath ${jarPath} kscript.app.KscriptKt "${kscript_args[@]}"
+exec ${JAVACMD:=java} "${java_args[@]}" -jar ${jarPath} "${kscript_args[@]}"
+
